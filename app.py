@@ -1,54 +1,37 @@
 import streamlit as st
-import requests
-import io
-from PIL import Image
 
 # पेज सेटिंग्स
 st.set_page_config(page_title="AI Flow Studio", page_icon="🎬", layout="wide")
 
 st.title("🎬 AI Flow Studio")
-st.write("फ्री में हाई-क्वालिटी AI इमेज जनरेट करें")
+st.write("फ्री और फास्ट AI इमेज जनरेटर")
 
 st.divider()
 
-# Streamlit Secrets से API Token लेना
-HF_TOKEN = st.secrets.get("HF_TOKEN", "")
-
-# वर्किंग मॉडल (Stable Diffusion XL Turbo - बहुत तेज़ और मुफ़्त)
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
-headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-
-def generate_image(prompt_text):
-    payload = {"inputs": prompt_text}
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            return Image.open(io.BytesIO(response.content)), None
-        elif response.status_code == 503:
-            return None, "मॉडल अभी लोड हो रहा है, कृपया 10 सेकंड बाद दोबारा बटन दबाएं।"
-        elif response.status_code == 401:
-            return None, "API Token सही नहीं है! कृपया Streamlit Secrets जांचें।"
-        else:
-            return None, f"Error {response.status_code}: {response.text}"
-            
-    except Exception as e:
-        return None, f"Connection Error: इंटरनेट या सर्वर की समस्या। ({str(e)})"
-
-# UI
+# UI Controls
 prompt = st.text_area("आप क्या बनाना चाहते हैं? (Prompt दर्ज करें):", 
-                      placeholder="A cute robot drinking tea in space, highly detailed, 4k...")
+                      placeholder="A cute baby in space, cinematic lighting, 4k...")
+
+aspect_ratio = st.selectbox("इमेज साइज़ (Aspect Ratio)", ["Square (1:1)", "Landscape (16:9)", "Portrait (9:16)"])
+
+# साइज़ सेट करना
+width, height = 1024, 1024
+if "16:9" in aspect_ratio:
+    width, height = 1280, 720
+elif "9:16" in aspect_ratio:
+    width, height = 720, 1280
 
 if st.button("🚀 Generate AI Image"):
-    if not HF_TOKEN:
-        st.error("कृपया Streamlit Secrets में अपना HF_TOKEN सेट करें!")
-    elif prompt:
-        with st.spinner("AI इमेज जनरेट हो रही है..."):
-            image, err = generate_image(prompt)
-            if image:
-                st.success("इमेज बन गई!")
-                st.image(image, caption=prompt, use_column_width=True)
-            else:
-                st.error(err)
+    if prompt:
+        with st.spinner("AI इमेज जनरेट हो रही है... कृपया कुछ सेकंड प्रतीक्षा करें..."):
+            # URL-encode the prompt safely
+            import urllib.parse
+            encoded_prompt = urllib.parse.quote(prompt)
+            
+            # Pollinations AI Free URL (बिना किसी API Key या एरर के काम करता है)
+            image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true"
+            
+            st.success("इमेज सफलतापूर्वक तैयार हो गई!")
+            st.image(image_url, caption=prompt, use_column_width=True)
     else:
         st.warning("कृपया पहले कुछ प्रॉम्प्ट लिखें!")
